@@ -13,6 +13,7 @@ if 'snake' not in st.session_state:
     st.session_state.game_started = False
     st.session_state.speed = 0.5
     st.session_state.last_move_time = 0
+    st.session_state.last_key = ''
 
 GRID_SIZE = 20
 
@@ -37,8 +38,34 @@ def move_snake(snake, direction):
 def check_collision(snake):
     return snake[0] in snake[1:]
 
+st.markdown("""
+<style>
+#keyboard-input { position: fixed; opacity: 0.01; width: 1px; height: 1px; top: -1000px; }
+.game-container { display: flex; justify-content: center; padding: 20px; }
+</style>
+<script>
+setTimeout(() => { const input = document.getElementById('keyboard-input'); if (input) { input.focus(); document.addEventListener('click', () => input.focus()); } }, 500);
+document.addEventListener('keydown', function(e) { const k = e.key.toUpperCase(); const keyMap = {'W':'UP','ARROWUP':'UP','S':'DOWN','ARROWDOWN':'DOWN','A':'LEFT','ARROWLEFT':'LEFT','D':'RIGHT','ARROWRIGHT':'RIGHT'}; if (keyMap[k] && e.target.tagName !== 'BUTTON') { e.preventDefault(); const input = document.getElementById('keyboard-input'); if (input) { input.value = keyMap[k]; input.dispatchEvent(new Event('input', { bubbles: true })); } } });
+</script>
+""", unsafe_allow_html=True)
+
 st.title("🐍 贪吃蛇游戏")
 st.markdown("### 经典贪吃蛇 - 网页版")
+st.markdown("**控制方法：** W/A/S/D 或箭头键，或使用屏幕按钮")
+
+key_input = st.text_input("键盘控制", value=st.session_state.last_key, key="keyboard-input", label_visibility="collapsed")
+if key_input:
+    k = key_input.upper()
+    if k == 'UP' and st.session_state.direction != 'DOWN':
+        st.session_state.direction = 'UP'
+    elif k == 'DOWN' and st.session_state.direction != 'UP':
+        st.session_state.direction = 'DOWN'
+    elif k == 'LEFT' and st.session_state.direction != 'RIGHT':
+        st.session_state.direction = 'LEFT'
+    elif k == 'RIGHT' and st.session_state.direction != 'LEFT':
+        st.session_state.direction = 'RIGHT'
+    st.session_state.last_key = ''
+    st.rerun()
 
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
@@ -97,7 +124,7 @@ if st.session_state.game_over:
     st.markdown(f"### 最终分数：{st.session_state.score}")
 
 def render_game():
-    output = "<div style='display:grid;grid-template-columns:repeat(20,20px);gap:1px;padding:10px;background:#1a1a2e;border-radius:10px;'>"
+    output = "<div class='game-container'><div style='display:grid;grid-template-columns:repeat(20,20px);gap:1px;padding:10px;background:#1a1a2e;border-radius:10px;'>"
     for row in range(GRID_SIZE):
         for col in range(GRID_SIZE):
             cell = (row, col)
@@ -109,7 +136,7 @@ def render_game():
                 output += "<div style='width:20px;height:20px;background:#ff0000;border-radius:50%;'></div>"
             else:
                 output += "<div style='width:20px;height:20px;background:#16213e;border-radius:2px;'></div>"
-    output += "</div>"
+    output += "</div></div>"
     st.markdown(output, unsafe_allow_html=True)
 
 if st.session_state.game_started and not st.session_state.game_over:
