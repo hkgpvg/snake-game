@@ -1,161 +1,119 @@
 import streamlit as st
-import random
-import time
 
 st.set_page_config(page_title="🐍 贪吃蛇游戏", page_icon="🐍", layout="centered")
 
-if 'snake' not in st.session_state:
-    st.session_state.snake = [(5, 5), (5, 4), (5, 3)]
-    st.session_state.direction = 'RIGHT'
-    st.session_state.food = (10, 10)
-    st.session_state.score = 0
-    st.session_state.game_over = False
-    st.session_state.game_started = False
-    st.session_state.speed = 0.5
-    st.session_state.last_move_time = 0
-    st.session_state.last_key = ''
-
-GRID_SIZE = 20
-
-def generate_food(snake):
-    while True:
-        food = (random.randint(0, GRID_SIZE-1), random.randint(0, GRID_SIZE-1))
-        if food not in snake:
-            return food
-
-def move_snake(snake, direction):
-    head = snake[0]
-    if direction == 'UP':
-        new_head = ((head[0] - 1) % GRID_SIZE, head[1])
-    elif direction == 'DOWN':
-        new_head = ((head[0] + 1) % GRID_SIZE, head[1])
-    elif direction == 'LEFT':
-        new_head = (head[0], (head[1] - 1) % GRID_SIZE)
-    elif direction == 'RIGHT':
-        new_head = (head[0], (head[1] + 1) % GRID_SIZE)
-    return [new_head] + snake[:-1]
-
-def check_collision(snake):
-    return snake[0] in snake[1:]
-
 st.markdown("""
+<!DOCTYPE html>
+<html>
+<head>
 <style>
-#keyboard-input { position: fixed; opacity: 0.01; width: 1px; height: 1px; top: -1000px; }
-.game-container { display: flex; justify-content: center; padding: 20px; }
+body { font-family: Arial, sans-serif; text-align: center; background: #0e1117; color: white; margin: 0; padding: 20px; }
+h1 { color: #00ff00; }
+#game { border: 2px solid #00ff00; border-radius: 10px; margin: 20px auto; display: block; }
+.controls { margin: 20px; }
+button { font-size: 24px; padding: 10px 20px; margin: 5px; background: #1a1a2e; color: #00ff00; border: 2px solid #00ff00; border-radius: 5px; cursor: pointer; }
+button:hover { background: #00ff00; color: #1a1a2e; }
+#score { font-size: 24px; color: #00ff00; }
+.instructions { color: #888; margin: 10px; }
 </style>
+</head>
+<body>
+<h1>🐍 贪吃蛇游戏</h1>
+<p class="instructions">控制方法：W/A/S/D 或 箭头键，或使用屏幕按钮</p>
+<canvas id="game" width="400" height="400"></canvas>
+<div class="controls">
+<div><button onclick="setDir('UP')">⬆️</button></div>
+<div><button onclick="setDir('LEFT')">⬅️</button> <button onclick="startGame()">🎮 开始/重置</button> <button onclick="setDir('RIGHT')">➡️</button></div>
+<div><button onclick="setDir('DOWN')">⬇️</button></div>
+</div>
+<div id="score">🏆 分数：0</div>
+
 <script>
-setTimeout(() => { const input = document.getElementById('keyboard-input'); if (input) { input.focus(); document.addEventListener('click', () => input.focus()); } }, 500);
-document.addEventListener('keydown', function(e) { const k = e.key.toUpperCase(); const keyMap = {'W':'UP','ARROWUP':'UP','S':'DOWN','ARROWDOWN':'DOWN','A':'LEFT','ARROWLEFT':'LEFT','D':'RIGHT','ARROWRIGHT':'RIGHT'}; if (keyMap[k] && e.target.tagName !== 'BUTTON') { e.preventDefault(); const input = document.getElementById('keyboard-input'); if (input) { input.value = keyMap[k]; input.dispatchEvent(new Event('input', { bubbles: true })); } } });
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const gridSize = 20;
+const tileCount = 20;
+
+let snake = [{x: 10, y: 10}];
+let food = {x: 15, y: 15};
+let dx = 0, dy = 0;
+let score = 0;
+let gameLoop;
+let started = false;
+let speed = 200;
+
+document.addEventListener('keydown', (e) => {
+    const key = e.key.toUpperCase();
+    if (['W','ARROWUP'].includes(key) && dy !== 1) { dx = 0; dy = -1; }
+    else if (['S','ARROWDOWN'].includes(key) && dy !== -1) { dx = 0; dy = 1; }
+    else if (['A','ARROWLEFT'].includes(key) && dx !== 1) { dx = -1; dy = 0; }
+    else if (['D','ARROWRIGHT'].includes(key) && dx !== -1) { dx = 1; dy = 0; }
+    if (!started && (dx || dy)) startGame();
+    e.preventDefault();
+});
+
+function setDir(dir) {
+    if (dir === 'UP' && dy !== 1) { dx = 0; dy = -1; }
+    else if (dir === 'DOWN' && dy !== -1) { dx = 0; dy = 1; }
+    else if (dir === 'LEFT' && dx !== 1) { dx = -1; dy = 0; }
+    else if (dir === 'RIGHT' && dx !== -1) { dx = 1; dy = 0; }
+    if (!started) startGame();
+}
+
+function startGame() {
+    snake = [{x: 10, y: 10}];
+    food = {x: 15, y: 15};
+    dx = 1; dy = 0;
+    score = 0;
+    started = true;
+    if (gameLoop) clearInterval(gameLoop);
+    gameLoop = setInterval(update, speed);
+}
+
+function update() {
+    const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+    head.x = (head.x + tileCount) % tileCount;
+    head.y = (head.y + tileCount) % tileCount;
+    
+    if (snake.some(s => s.x === head.x && s.y === head.y)) {
+        clearInterval(gameLoop);
+        started = false;
+        alert('💀 游戏结束！分数：' + score);
+        return;
+    }
+    
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) {
+        score += 10;
+        food = {x: Math.floor(Math.random() * tileCount), y: Math.floor(Math.random() * tileCount)};
+    } else {
+        snake.pop();
+    }
+    
+    document.getElementById('score').textContent = '🏆 分数：' + score;
+    draw();
+}
+
+function draw() {
+    ctx.fillStyle = '#16213e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath();
+    ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2 - 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    snake.forEach((seg, i) => {
+        ctx.fillStyle = i === 0 ? '#00ff00' : '#00cc00';
+        ctx.fillRect(seg.x * gridSize + 1, seg.y * gridSize + 1, gridSize - 2, gridSize - 2);
+    });
+}
+
+draw();
 </script>
+</body>
+</html>
 """, unsafe_allow_html=True)
 
-st.title("🐍 贪吃蛇游戏")
-st.markdown("### 经典贪吃蛇 - 网页版")
-st.markdown("**控制方法：** W/A/S/D 或箭头键，或使用屏幕按钮")
-
-key_input = st.text_input("键盘控制", value=st.session_state.last_key, key="keyboard-input", label_visibility="collapsed")
-if key_input:
-    k = key_input.upper()
-    if k == 'UP' and st.session_state.direction != 'DOWN':
-        st.session_state.direction = 'UP'
-    elif k == 'DOWN' and st.session_state.direction != 'UP':
-        st.session_state.direction = 'DOWN'
-    elif k == 'LEFT' and st.session_state.direction != 'RIGHT':
-        st.session_state.direction = 'LEFT'
-    elif k == 'RIGHT' and st.session_state.direction != 'LEFT':
-        st.session_state.direction = 'RIGHT'
-    st.session_state.last_key = ''
-    st.rerun()
-
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.markdown("#### 游戏控制")
-    up_col = st.columns([1, 1, 1])
-    with up_col[1]:
-        if st.button("⬆️", key="up"):
-            if st.session_state.direction != 'DOWN':
-                st.session_state.direction = 'UP'
-                st.rerun()
-    mid_col = st.columns([1, 1, 1])
-    with mid_col[0]:
-        if st.button("⬅️", key="left"):
-            if st.session_state.direction != 'RIGHT':
-                st.session_state.direction = 'LEFT'
-                st.rerun()
-    with mid_col[1]:
-        if not st.session_state.game_started:
-            if st.button("🎮 开始游戏", key="start"):
-                st.session_state.game_started = True
-                st.session_state.game_over = False
-                st.session_state.snake = [(5, 5), (5, 4), (5, 3)]
-                st.session_state.direction = 'RIGHT'
-                st.session_state.food = generate_food(st.session_state.snake)
-                st.session_state.score = 0
-                st.session_state.last_move_time = time.time()
-                st.rerun()
-        elif st.session_state.game_over:
-            if st.button("🔄 重新开始", key="restart"):
-                st.session_state.game_started = True
-                st.session_state.game_over = False
-                st.session_state.snake = [(5, 5), (5, 4), (5, 3)]
-                st.session_state.direction = 'RIGHT'
-                st.session_state.food = generate_food(st.session_state.snake)
-                st.session_state.score = 0
-                st.session_state.last_move_time = time.time()
-                st.rerun()
-    with mid_col[2]:
-        if st.button("➡️", key="right"):
-            if st.session_state.direction != 'LEFT':
-                st.session_state.direction = 'RIGHT'
-                st.rerun()
-    down_col = st.columns([1, 1, 1])
-    with down_col[1]:
-        if st.button("⬇️", key="down"):
-            if st.session_state.direction != 'UP':
-                st.session_state.direction = 'DOWN'
-                st.rerun()
-
-speed = st.slider("🐢 速度调节", 0.1, 1.0, 0.5, 0.1)
-st.session_state.speed = speed
-st.markdown(f"### 🏆 分数：**{st.session_state.score}**")
-
-if st.session_state.game_over:
-    st.error("💀 游戏结束！")
-    st.markdown(f"### 最终分数：{st.session_state.score}")
-
-def render_game():
-    output = "<div class='game-container'><div style='display:grid;grid-template-columns:repeat(20,20px);gap:1px;padding:10px;background:#1a1a2e;border-radius:10px;'>"
-    for row in range(GRID_SIZE):
-        for col in range(GRID_SIZE):
-            cell = (row, col)
-            if cell == st.session_state.snake[0]:
-                output += "<div style='width:20px;height:20px;background:#00ff00;border-radius:3px;'></div>"
-            elif cell in st.session_state.snake:
-                output += "<div style='width:20px;height:20px;background:#00cc00;border-radius:3px;'></div>"
-            elif cell == st.session_state.food:
-                output += "<div style='width:20px;height:20px;background:#ff0000;border-radius:50%;'></div>"
-            else:
-                output += "<div style='width:20px;height:20px;background:#16213e;border-radius:2px;'></div>"
-    output += "</div></div>"
-    st.markdown(output, unsafe_allow_html=True)
-
-if st.session_state.game_started and not st.session_state.game_over:
-    render_game()
-    if time.time() - st.session_state.last_move_time >= st.session_state.speed:
-        new_snake = move_snake(st.session_state.snake, st.session_state.direction)
-        if new_snake[0] == st.session_state.food:
-            st.session_state.snake = new_snake + [st.session_state.snake[-1]]
-            st.session_state.score += 10
-            st.session_state.food = generate_food(st.session_state.snake)
-        else:
-            st.session_state.snake = new_snake
-        if check_collision(st.session_state.snake):
-            st.session_state.game_over = True
-        st.session_state.last_move_time = time.time()
-        st.rerun()
-elif not st.session_state.game_started:
-    st.info("👆 点击 **开始游戏** 开始！")
-    render_game()
-
 st.markdown("---")
-st.markdown("🎮 Created with Streamlit | W/A/S/D or buttons to control")
+st.markdown("🎮 Created with Streamlit")
