@@ -3,21 +3,17 @@ import streamlit as st
 st.set_page_config(page_title="🐍 贪吃蛇游戏", page_icon="🐍", layout="centered")
 
 st.markdown("""
-<!DOCTYPE html>
-<html>
-<head>
 <style>
-body { font-family: Arial, sans-serif; text-align: center; background: #0e1117; color: white; margin: 0; padding: 20px; }
-h1 { color: #00ff00; }
-#game { border: 2px solid #00ff00; border-radius: 10px; margin: 20px auto; display: block; }
+.game-container { text-align: center; padding: 20px; }
+#game { border: 2px solid #00ff00; border-radius: 10px; margin: 20px auto; display: block; background: #16213e; }
 .controls { margin: 20px; }
 button { font-size: 24px; padding: 10px 20px; margin: 5px; background: #1a1a2e; color: #00ff00; border: 2px solid #00ff00; border-radius: 5px; cursor: pointer; }
 button:hover { background: #00ff00; color: #1a1a2e; }
 #score { font-size: 24px; color: #00ff00; }
 .instructions { color: #888; margin: 10px; }
 </style>
-</head>
-<body>
+
+<div class="game-container">
 <h1>🐍 贪吃蛇游戏</h1>
 <p class="instructions">控制方法：W/A/S/D 或 箭头键，或使用屏幕按钮</p>
 <canvas id="game" width="400" height="400"></canvas>
@@ -27,6 +23,7 @@ button:hover { background: #00ff00; color: #1a1a2e; }
 <div><button onclick="setDir('DOWN')">⬇️</button></div>
 </div>
 <div id="score">🏆 分数：0</div>
+</div>
 
 <script>
 const canvas = document.getElementById('game');
@@ -40,7 +37,6 @@ let dx = 0, dy = 0;
 let score = 0;
 let gameLoop;
 let started = false;
-let speed = 200;
 
 document.addEventListener('keydown', (e) => {
     const key = e.key.toUpperCase();
@@ -67,7 +63,7 @@ function startGame() {
     score = 0;
     started = true;
     if (gameLoop) clearInterval(gameLoop);
-    gameLoop = setInterval(update, speed);
+    gameLoop = setInterval(update, 200);
 }
 
 function update() {
@@ -111,8 +107,6 @@ function draw() {
 
 draw();
 </script>
-</body>
-</html>
 """, unsafe_allow_html=True)
 
 st.markdown("---")
